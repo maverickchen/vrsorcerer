@@ -4,7 +4,7 @@ using UnityEngine;
 using Valve.VR;
 using Valve.VR.InteractionSystem;
 
-public class MagicInterface : MonoBehaviour
+public class MagicManager : MonoBehaviour
 {
     public GameObject targetingReticle;
     private Stack<GameObject> shardStack;
@@ -13,10 +13,9 @@ public class MagicInterface : MonoBehaviour
     public AudioSource audioSource;
     public AudioClip targetFoundClip;
 
-    private GameObject currentShard;
-
-    public GameObject magicType;
     public ParticleSystem runeParticles;
+
+    private Dictionary<Hand, ISpell> activeMagicMap = new Dictionary<Hand, ISpell>();
 
     // Start is called before the first frame update
     void Start()
@@ -24,40 +23,41 @@ public class MagicInterface : MonoBehaviour
         shardStack = new Stack<GameObject>();
     }
 
+    public ISpell GetSpellFromHand(Hand hand)
+    {
+        ISpell spell;
+        if (activeMagicMap.TryGetValue(hand, out spell))
+        {
+            return spell;
+        }
+        return null;
+    }
+
     // Update is called once per frame
     void Update()
     {
         foreach (Hand hand in Player.instance.hands)
         {
-            if (hand.GetGrabStarting() != GrabTypes.None)
+            try
             {
-                if (magicType)
+                ISpell spell = hand.hoveringInteractable.gameObject.GetComponent<ISpell>();
+                if (hand.GetGrabStarting() != GrabTypes.None)
                 {
-                    magicType.GetComponent<ListenOnHover>().Prepare();
-                    //GameObject newShard = Instantiate(shardPrefab, transform.position + Vector3.up * 2, transform.rotation);
-                    //currentShard = newShard;
-                    //newShard.GetComponent<ShardArc>().target = targetedObject;
-                    //shardStack.Push(newShard);
+                    spell.Prepare();
                 }
-            }
-            else if (hand.GetGrabEnding() != GrabTypes.None)
-            {
-                if (magicType)
+                else if (hand.GetGrabEnding() != GrabTypes.None)
                 {
-                    magicType.GetComponent<ListenOnHover>().Execute();
+                    spell.Execute();
                     runeParticles.Stop();
                     runeParticles.Play();
                 }
-                
-                //Shoot();
             }
+            catch (System.Exception)
+            {
+                Debug.Log("no spell active");
+            }
+            
         }
-    }
-
-    public void Shoot()
-    {
-        shardStack.Pop().GetComponent<ShardArc>().Launch(20f);
-        currentShard = null;
     }
 
     void FixedUpdate()
@@ -65,7 +65,7 @@ public class MagicInterface : MonoBehaviour
         RaycastHit hit = new RaycastHit();
         int TARGETABLE_LAYER = 9;
         float radius = .25f;
-        float maxDist = 15f;
+        float maxDist = 30f;
         int layerMask = 1 << TARGETABLE_LAYER;
         Vector3 startPos = Player.instance.headCollider.transform.position;
         Vector3 dir = Player.instance.headCollider.transform.forward;
@@ -74,18 +74,21 @@ public class MagicInterface : MonoBehaviour
         if (hit.collider && hit.collider.gameObject != targetedObject)
         {
             targetedObject = hit.collider.gameObject;
-            //if (currentShard)
-            //{
-            //    currentShard.GetComponent<ShardArc>().target = targetedObject;
-            //}
             targetingReticle.GetComponent<FaceThePlayer>().focusedObj = targetedObject;
-            if (magicType)
+            foreach (Hand hand in Player.instance.hands)
             {
-                magicType.GetComponent<ListenOnHover>().SetTarget(targetedObject);
+                try
+                {
+                    ISpell spell = hand.hoveringInteractable.gameObject.GetComponent<ISpell>();
+                    spell.SetTarget(targetedObject);
+                }
+                catch (System.Exception)
+                {
+                    Debug.Log("No current spell");
+                }
             }
             audioSource.clip = targetFoundClip;
             audioSource.Play();
         }
-        
     }
 }

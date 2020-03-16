@@ -52,7 +52,7 @@ public class EnemyManager : MonoBehaviour
             {
                 int spawnIndex = Random.Range(0, spawnPositions.Count);
                 GameObject enemyPrefab = enemyPrefabs[Random.Range(0, enemyPrefabs.Count)];
-                GameObject newEnemy = Instantiate(enemyPrefab, spawnPositions[spawnIndex], Quaternion.identity);
+                GameObject newEnemy = Instantiate(enemyPrefab, spawnPositions[spawnIndex], Quaternion.Euler(0f, 180f, 0f));
                 newEnemy.GetComponent<EnemyController>().isActive = true;
                 enemies.Add(newEnemy);
                 lastSpawnedTime = Time.time;

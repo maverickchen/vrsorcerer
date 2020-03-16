@@ -4,11 +4,11 @@ using UnityEngine;
 using Valve.VR;
 using Valve.VR.InteractionSystem;
 
-public class ListenOnHover : MonoBehaviour
+public class Spell : MonoBehaviour, ISpell
 {
     bool hovering = false;
 
-    public MagicInterface magic;
+    public MagicManager magicManager;
     public GameObject shardPrefab;
 
     public AudioClip hoverStartSound;
@@ -18,8 +18,6 @@ public class ListenOnHover : MonoBehaviour
     private Stack<GameObject> shardStack;
     private GameObject targetedObject;
     private Interactable interactable;
-    [SerializeField]
-    private Material mat;
 
     // Start is called before the first frame update
     void Start()
@@ -31,9 +29,6 @@ public class ListenOnHover : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (hovering)
-        {
-        }
     }
 
     public void SetTarget(GameObject newTarget)
@@ -48,9 +43,9 @@ public class ListenOnHover : MonoBehaviour
 
     public void Prepare()
     {
-        GameObject newShard = Instantiate(shardPrefab, transform.position + Vector3.up * 3f, transform.rotation);
+        GameObject newShard = Instantiate(shardPrefab, transform.position + Vector3.up*2f + Player.instance.bodyDirectionGuess.normalized, transform.rotation);
         currentShard = newShard;
-        newShard.GetComponent<ShardArc>().target = magic.targetedObject;
+        newShard.GetComponent<ShardArc>().target = magicManager.targetedObject;
         shardStack.Push(newShard);
     }
 
@@ -66,25 +61,12 @@ public class ListenOnHover : MonoBehaviour
     public void OnHover()
     {
         hovering = true;
-        foreach (Hand hand in Player.instance.hands)
-        {
-            Debug.Log(hand.hoveringInteractable);
-            if (hand.hoveringInteractable == interactable)
-            {
-                Debug.Log("Hovering");
-                ushort length = 10000;
-                hand.TriggerHapticPulse(length);
-            }
-        }
-        magic.magicType = gameObject;
         audioSource.clip = hoverStartSound;
         audioSource.Play();
     }
 
     public void OnHoverExit()
     {
-        hovering = false;
-        magic.magicType = null;
         currentShard = null;
         while (shardStack.Count > 0)
         {
